@@ -1,0 +1,175 @@
+DAY 1 OF CODING IN SQL 
+
+created end to end 
+
+CREATE DATABASE HealthcareManagement;
+USE HealthcareManagement;
+SHOW TABLES;
+
+-- Step 1: Create the Patients Tableee 
+CREATE TABLE Patients (
+    PatientID INT AUTO_INCREMENT PRIMARY KEY,
+    FirstName VARCHAR(50) NOT NULL,
+    LastName VARCHAR(50) NOT NULL,
+    DateOfBirth DATE NOT NULL,
+    Gender ENUM('Male', 'Female', 'Other') NOT NULL,
+    PhoneNumber VARCHAR(15) UNIQUE,
+    Email VARCHAR(100) UNIQUE,
+    Address TEXT,
+    CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Step 2: Create the Doctors Tablee
+CREATE TABLE Doctors (
+    DoctorID INT AUTO_INCREMENT PRIMARY KEY,
+    FirstName VARCHAR(50) NOT NULL,
+    LastName VARCHAR(50) NOT NULL,
+    Specialization VARCHAR(100) NOT NULL,
+    PhoneNumber VARCHAR(15) UNIQUE,
+    Email VARCHAR(100) UNIQUE,
+    CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Step 3: Create the MedicalRecords Tablee
+CREATE TABLE MedicalRecords (
+    RecordID INT AUTO_INCREMENT PRIMARY KEY,
+    PatientID INT NOT NULL,
+    DoctorID INT NOT NULL,
+    VisitDate DATETIME NOT NULL,
+    Feedback TEXT,
+    Prescription TEXT,
+    Dosage TEXT,
+    NextDoctorVisitDate DATETIME,
+    Report TEXT,
+    Advice TEXT,
+    RecordType ENUM('Consultation', 'Surgery', 'Lab Test', 'Immunization', 'Follow-Up', 'Other') NOT NULL,
+    Diagnosis TEXT,
+    Symptoms TEXT,
+    LabResults TEXT,
+    ProcedureDetails TEXT,
+    ImmunizationDetails TEXT,
+    Allergies TEXT,
+    ChronicConditions TEXT,
+    LifestyleFactors TEXT,
+    FamilyHistory TEXT,
+    FollowUpDate DATETIME,
+    CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UpdatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (PatientID) REFERENCES Patients(PatientID),
+    FOREIGN KEY (DoctorID) REFERENCES Doctors(DoctorID)
+);
+
+
+
+-- Inserting sample patient data--
+INSERT INTO Patients (FirstName, LastName, DateOfBirth, Gender, PhoneNumber, Email, Address)
+VALUES
+('Alice', 'Brown', '1990-05-15', 'Female', '1112223333', 'alice.brown@gmail.com', '123 Main St'),
+('Bob', 'Johnson', '1985-09-20', 'Male', '4445556666', 'bob.johnson@yahoo.com', '456 Oak St');
+
+-- Inserting sample doctor data--
+INSERT INTO Doctors (FirstName, LastName, Specialization, PhoneNumber, Email)
+VALUES
+('John', 'Doe', 'Cardiologist', '1234567890', 'johndoe@hospital.com'),
+('Jane', 'Smith', 'Dermatologist', '0987654321', 'janesmith@clinic.com');
+
+-- Inserting a consultation record for PatientID 1 and DoctorID 1
+INSERT INTO MedicalRecords (
+    PatientID, DoctorID, VisitDate, Feedback, Prescription, Dosage, 
+    NextDoctorVisitDate, Report, Advice, RecordType, Diagnosis, Symptoms, FollowUpDate
+)
+VALUES 
+(1, 1, '2025-01-04 10:00:00', 
+ 'Patient shows improvement in blood pressure levels.', 
+ 'Medication A, Medication B', 'Take Medication A: 10mg daily, Medication B: 5mg twice daily', 
+ '2025-01-11 15:00:00', 
+ 'Detailed report on hypertension provided.', 
+ 'Maintain a low-sodium diet and exercise regularly.', 
+ 'Consultation', 
+ 'Hypertension', 
+ 'Headache, Dizziness', 
+ '2025-02-01 10:00:00');
+ 
+ -- Inserting a follow-up record for PatientID 2 and DoctorID 2--
+INSERT INTO MedicalRecords (
+    PatientID, DoctorID, VisitDate, Feedback, Prescription, Dosage, 
+    NextDoctorVisitDate, Report, Advice, RecordType, FollowUpDate
+)
+VALUES 
+(2, 2, '2025-01-12 14:00:00', 
+ 'Skin irritation has reduced; patient is responding well to treatment.', 
+ 'Topical Cream X', 'Apply twice daily for 7 days', 
+ '2025-01-20 10:00:00', 
+ 'Provided a report on skin allergy management.', 
+ 'Avoid exposure to allergens and keep skin moisturized.', 
+ 'Follow-Up', 
+ '2025-02-10 11:00:00');
+
+
+SELECT * FROM Patients;
+SELECT * FROM Doctors;
+SELECT * FROM MedicalRecords;
+
+
+CREATE TABLE AccessControl (
+    AccessID INT AUTO_INCREMENT PRIMARY KEY,     -- Unique ID for each access request
+    PatientID INT NOT NULL,                      -- Patient making data available
+    DoctorID INT NOT NULL,                       -- Doctor requesting or being granted access
+    AccessStatus ENUM('Pending', 'Granted', 'Revoked') DEFAULT 'Pending', -- Access state
+    CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UpdatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (PatientID) REFERENCES Patients(PatientID),
+    FOREIGN KEY (DoctorID) REFERENCES Doctors(DoctorID)
+);
+
+-- 4 cases 
+-- Query to get the patient's own data
+SELECT * 
+FROM MedicalRecords 
+WHERE PatientID = 1; -- Replace 1 with the authenticated PatientID
+
+-- Doctor requests access to a patient's data
+INSERT INTO AccessControl (PatientID, DoctorID, AccessStatus)
+VALUES (1, 2, 'Pending'); -- PatientID = 1, DoctorID = 2
+
+-- Patient grants access to the doctor
+UPDATE AccessControl
+SET AccessStatus = 'Granted'
+WHERE PatientID = 1 AND DoctorID = 2;
+
+-- Patient revokes access from the doctor
+UPDATE AccessControl
+SET AccessStatus = 'Revoked'
+WHERE PatientID = 1 AND DoctorID = 2;
+
+-- Doctor retrieves data with granted access
+SELECT MR.*
+FROM MedicalRecords MR
+JOIN AccessControl AC ON MR.PatientID = AC.PatientID
+WHERE AC.DoctorID = 2 AND AC.AccessStatus = 'Granted';
+
+
+
+-- first way/ method which is not much recommended tbh 
+-- -- Query to fetch anonymized medical records
+-- SELECT 
+--     RecordID, VisitDate, Feedback, Prescription, Dosage, 
+--     Diagnosis, Symptoms, LabResults, ProcedureDetails, ImmunizationDetails
+-- FROM MedicalRecords;
+
+
+-- second method which is recommended 
+-- anonymous for doctor as patient name is masked 
+SELECT 
+    RecordID, 
+    VisitDate, 
+    Feedback, 
+    Prescription, 
+    Dosage, 
+    Diagnosis, 
+    Symptoms, 
+    LabResults, 
+    ProcedureDetails, 
+    ImmunizationDetails,
+    'Anonymous' AS PatientName -- Masking patient identity
+FROM MedicalRecords;
